@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AZ State Wastewater Sequencing Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Browser-only dependencies for GitHub Pages/static hosting. -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Wastewater genomic surveillance</p>
+      <h1>AZ State WW Sequencing Dashboard</h1>
+      <p class="subtitle">
+        Upload a CSV, TSV, or Excel file and generate weekly lineage proportions, PCR concentration trends,
+        and Freyja abundance summaries directly in your browser.
+      </p>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="panel upload-panel" aria-labelledby="upload-title">
+      <div>
+        <h2 id="upload-title">1. Upload wastewater sequencing data</h2>
+        <p>
+          Expected columns are based on the original Dash/Python script:
+          <code>specimen_id</code>, <code>nextclade_lineage</code>, <code>pango_lineage</code>,
+          <code>lineages</code>, <code>abundances</code>, <code>sample_collect_date</code>,
+          <code>pcr_target_avg_conc_log</code>, <code>sample_location_specify</code>,
+          <code>wwtp_name</code>, and <code>freyja_coverage</code>.
+        </p>
+      </div>
+
+      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Upload data file">
+        <input id="file-input" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" hidden />
+        <div class="drop-icon">⇪</div>
+        <strong>Drop your data file here</strong>
+        <span>or click to browse for CSV, TSV, XLSX, or XLS</span>
+      </div>
+
+      <div class="status-row">
+        <div id="file-status" class="status-pill">No file loaded</div>
+        <button id="load-sample-btn" class="secondary-btn" type="button">Load sample data</button>
+      </div>
+
+      <div id="message-box" class="message-box" aria-live="polite"></div>
+    </section>
+
+    <section id="workspace-panel" class="panel workspace-panel is-disabled" aria-labelledby="workspace-title">
+      <div class="section-title-row">
+        <div>
+          <h2 id="workspace-title">2. Dashboard workspace</h2>
+          <p>Use the filter tab to choose sites, locations, dates, and variants. Use the charts tab to view all plots side by side.</p>
+        </div>
+        <button id="reset-filters-btn" class="secondary-btn" type="button" disabled>Reset filters</button>
+      </div>
+
+      <div class="workspace-tabs" role="tablist" aria-label="Dashboard workspace tabs">
+        <button class="workspace-tab is-active" type="button" role="tab" aria-selected="true" data-workspace-tab="filters">Filters & summary</button>
+        <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-workspace-tab="charts">All charts side by side</button>
+      </div>
+
+      <div id="filters-tab" class="workspace-tab-panel is-active" role="tabpanel">
+        <section id="controls-panel" class="controls-panel" aria-labelledby="controls-title">
+          <div class="subsection-heading">
+            <h3 id="controls-title">Filter and compare</h3>
+            <p>Select one or more WWTPs. Sample locations update based on the WWTPs selected.</p>
+          </div>
+
+          <div class="controls-grid">
+            <div class="control-group">
+              <span>WWTP selection</span>
+              <div id="site-dropdown" class="multi-dropdown is-disabled" data-dropdown="site">
+                <button id="site-dropdown-trigger" class="dropdown-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" disabled>
+                  <span id="site-dropdown-label">Load data first</span>
+                  <span class="dropdown-chevron">⌄</span>
+                </button>
+                <div class="dropdown-menu" role="listbox" aria-label="WWTP selection">
+                  <div class="dropdown-actions">
+                    <button id="select-all-sites-btn" class="mini-btn" type="button">Select all</button>
+                    <button id="clear-sites-btn" class="mini-btn" type="button">Clear</button>
+                  </div>
+                  <div id="site-option-list" class="dropdown-options"></div>
+                </div>
+              </div>
+              <small>Choose one or more wastewater treatment plants.</small>
+            </div>
+
+            <div class="control-group">
+              <span>Sample location selection</span>
+              <div id="location-dropdown" class="multi-dropdown is-disabled" data-dropdown="location">
+                <button id="location-dropdown-trigger" class="dropdown-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" disabled>
+                  <span id="location-dropdown-label">Select WWTPs first</span>
+                  <span class="dropdown-chevron">⌄</span>
+                </button>
+                <div class="dropdown-menu" role="listbox" aria-label="Sample location selection">
+                  <div class="dropdown-actions">
+                    <button id="select-all-locations-btn" class="mini-btn" type="button">Select all</button>
+                    <button id="clear-locations-btn" class="mini-btn" type="button">Clear</button>
+                  </div>
+                  <div id="location-option-list" class="dropdown-options"></div>
+                </div>
+              </div>
+              <small>Leave blank to include every location for the selected WWTPs.</small>
+            </div>
+
+            <div class="control-group date-group">
+              <span>Date range</span>
+              <div class="date-inputs">
+                <label>
+                  Start
+                  <input id="start-date" type="date" disabled />
+                </label>
+                <label>
+                  End
+                  <input id="end-date" type="date" disabled />
+                </label>
+              </div>
+            </div>
+
+            <div class="control-group toggles-group">
+              <span>Display options</span>
+              <label class="checkbox-row">
+                <input id="comparison-toggle" type="checkbox" checked disabled />
+                <span>Show selected WWTPs side by side</span>
+              </label>
+              <label class="checkbox-row">
+                <input id="dim-toggle" type="checkbox" checked disabled />
+                <span>Dim non-selected variants when highlighting</span>
+              </label>
+              <button id="open-charts-btn" class="primary-btn" type="button" disabled>Open charts tab</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="summary-panel" class="summary-panel" aria-labelledby="summary-title">
+          <div class="section-title-row compact">
+            <div>
+              <h3 id="summary-title">Summary and variant selection</h3>
+              <p>Use the variant dropdown to highlight one or more variants across Nextclade, Pango, and Freyja charts.</p>
+            </div>
+            <button id="clear-highlight-btn" class="secondary-btn" type="button" disabled>Clear variant selection</button>
+          </div>
+
+          <div id="summary-cards" class="summary-cards"></div>
+
+          <div class="variant-dropdown-row">
+            <div class="control-group variant-control">
+              <span>Variant selection</span>
+              <div id="variant-dropdown" class="multi-dropdown is-disabled" data-dropdown="variant">
+                <button id="variant-dropdown-trigger" class="dropdown-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" disabled>
+                  <span id="variant-dropdown-label">No variants selected</span>
+                  <span class="dropdown-chevron">⌄</span>
+                </button>
+                <div class="dropdown-menu variant-menu" role="listbox" aria-label="Variant selection">
+                  <div class="dropdown-actions">
+                    <button id="select-all-variants-btn" class="mini-btn" type="button">Select all shown</button>
+                    <button id="clear-variants-btn" class="mini-btn" type="button">Clear</button>
+                  </div>
+                  <div id="variant-option-list" class="dropdown-options variant-options"></div>
+                </div>
+              </div>
+              <small>Checked variants remain visually emphasized; other variants are dimmed when highlighting is active.</small>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="charts-tab" class="workspace-tab-panel" role="tabpanel">
+        <section id="charts-panel" class="charts-panel" aria-labelledby="charts-title">
+          <div class="section-title-row">
+            <div>
+              <h3 id="charts-title">All charts side by side</h3>
+              <p>Each selected WWTP gets its own chart card with Nextclade, Pango, PCR log concentration, and Freyja abundance plots.</p>
+            </div>
+            <button id="back-to-filters-btn" class="secondary-btn" type="button">Back to filters</button>
+          </div>
+          <div id="plots-panel" class="plots-panel" aria-live="polite">
+            <div class="empty-state">
+              <h2>No data loaded yet</h2>
+              <p>Upload a file to generate the dashboard.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>Browser-only Plotly dashboard. No Python backend, no server, and no local hosting required.</p>
+  </footer>
+
+  <script src="script.js?v=20260702-dropdown-side-by-side-v6"></script>
+</body>
+</html>
