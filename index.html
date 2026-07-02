@@ -55,14 +55,14 @@
       <div class="section-title-row">
         <div>
           <h2 id="workspace-title">2. Dashboard workspace</h2>
-          <p>Use the filter tab to choose sites, locations, dates, and variants. Use the charts tab to view all plots side by side.</p>
+          <p>Choose filters, select variants, and review each chart type on its own dedicated tab.</p>
         </div>
         <button id="reset-filters-btn" class="secondary-btn" type="button" disabled>Reset filters</button>
       </div>
 
       <div class="workspace-tabs" role="tablist" aria-label="Dashboard workspace tabs">
         <button class="workspace-tab is-active" type="button" role="tab" aria-selected="true" data-workspace-tab="filters">Filters & summary</button>
-        <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-workspace-tab="charts">All charts side by side</button>
+        <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-workspace-tab="charts">Charts</button>
       </div>
 
       <div id="filters-tab" class="workspace-tab-panel is-active" role="tabpanel">
@@ -126,14 +126,10 @@
             <div class="control-group toggles-group">
               <span>Display options</span>
               <label class="checkbox-row">
-                <input id="comparison-toggle" type="checkbox" checked disabled />
-                <span>Show selected WWTPs side by side</span>
-              </label>
-              <label class="checkbox-row">
                 <input id="dim-toggle" type="checkbox" checked disabled />
                 <span>Dim non-selected variants when highlighting</span>
               </label>
-              <button id="open-charts-btn" class="primary-btn" type="button" disabled>Open charts tab</button>
+              <button id="open-charts-btn" class="primary-btn" type="button" disabled>Open charts</button>
             </div>
           </div>
         </section>
@@ -173,13 +169,21 @@
 
       <div id="charts-tab" class="workspace-tab-panel" role="tabpanel">
         <section id="charts-panel" class="charts-panel" aria-labelledby="charts-title">
-          <div class="section-title-row">
+          <div class="section-title-row compact chart-toolbar">
             <div>
-              <h3 id="charts-title">All charts side by side</h3>
-              <p>Each selected WWTP gets its own chart card with Nextclade, Pango, PCR log concentration, and Freyja abundance plots.</p>
+              <h3 id="charts-title">Charts</h3>
+              <p>Each plot type has its own tab. Selected WWTPs are shown side by side inside the active chart tab.</p>
             </div>
             <button id="back-to-filters-btn" class="secondary-btn" type="button">Back to filters</button>
           </div>
+
+          <div class="chart-tabs" role="tablist" aria-label="Chart type tabs">
+            <button class="chart-tab is-active" type="button" role="tab" aria-selected="true" data-chart-tab="nextclade">Nextclade</button>
+            <button class="chart-tab" type="button" role="tab" aria-selected="false" data-chart-tab="pango">Pango</button>
+            <button class="chart-tab" type="button" role="tab" aria-selected="false" data-chart-tab="pcr">PCR log concentration</button>
+            <button class="chart-tab" type="button" role="tab" aria-selected="false" data-chart-tab="freyja">Freyja abundance</button>
+          </div>
+
           <div id="plots-panel" class="plots-panel" aria-live="polite">
             <div class="empty-state">
               <h2>No data loaded yet</h2>
@@ -195,6 +199,6 @@
     <p>Browser-only Plotly dashboard. No Python backend, no server, and no local hosting required.</p>
   </footer>
 
-  <script src="script.js?v=20260702-dropdown-side-by-side-v6"></script>
+  <script src="script.js?v=20260702-freyja-side-legend-tabs-v7"></script>
 </body>
 </html>
